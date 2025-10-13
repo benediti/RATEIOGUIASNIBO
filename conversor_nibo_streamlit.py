@@ -320,13 +320,14 @@ def main():
                         {"costCenterId": "cc2", "value": 23.45}
                     ]
                 }
+                st.markdown("---")
+                st.subheader("📝 Log de Envio para Nibo")
+                # Decide qual JSON enviar
+                json_envio = result if result else json_teste
+                st.write("**JSON que será enviado (body):**")
+                st.json(json_envio)
                 if st.button("🚀 Enviar para Nibo", type="secondary"):
-                    st.markdown("---")
-                    st.subheader("📝 Log de Envio para Nibo")
-                    # Decide qual JSON enviar
-                    json_envio = result if result else json_teste
-                    st.write("**JSON enviado (body):**")
-                    st.json(json_envio)
+                    st.info("Enviando para Nibo...")
                     if not api_key or not nibo_url:
                         st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
                     else:
@@ -334,9 +335,9 @@ def main():
                             "Authorization": f"Bearer {api_key}",
                             "Content-Type": "application/json"
                         }
+                        st.write(f"**Endpoint:** {nibo_url}")
+                        st.write(f"**Headers:** {headers}")
                         try:
-                            st.write(f"**Endpoint:** {nibo_url}")
-                            st.write(f"**Headers:** {headers}")
                             response = requests.post(nibo_url, json=json_envio, headers=headers)
                             st.write(f"**Status da resposta:** {response.status_code}")
                             st.write("**Resposta bruta:**")
