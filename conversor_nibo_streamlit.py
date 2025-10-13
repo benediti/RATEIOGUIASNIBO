@@ -246,11 +246,8 @@ def main():
                 
                 if result:
                     st.success("✅ **JSON gerado com sucesso!**")
-                    
-                    # Exibe o JSON
                     with st.expander("👀 **Visualizar JSON gerado**", expanded=False):
                         st.json(result)
-                    
                     # Botão de download
                     json_string = json.dumps(result, ensure_ascii=False, indent=4)
                     st.download_button(
@@ -260,20 +257,40 @@ def main():
                         mime="application/json",
                         type="primary"
                     )
-                    
                     # Estatísticas
                     st.markdown("---")
                     col1, col2, col3 = st.columns(3)
-                    
                     with col1:
                         st.metric("💰 Valor Total", f"R$ {result['categories'][0]['value']:.2f}")
-                    
                     with col2:
                         total_cc = sum(cc['value'] for cc in result['costCenters'])
                         st.metric("🏢 Total Centros Custo", f"R$ {total_cc:.2f}")
-                    
                     with col3:
                         st.metric("📊 Centros de Custo", len(result['costCenters']))
+
+                    # Botão para enviar para Nibo
+                    import os
+                    from dotenv import load_dotenv
+                    import requests
+                    load_dotenv()
+                    api_key = os.getenv("NIBO_API_KEY")
+                    nibo_url = os.getenv("NIBO_API_URL")
+                    if st.button("🚀 Enviar para Nibo", type="secondary"):
+                        if not api_key or not nibo_url:
+                            st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
+                        else:
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json"
+                            }
+                            try:
+                                response = requests.post(nibo_url, json=result, headers=headers)
+                                if response.status_code == 200:
+                                    st.success("Enviado com sucesso!")
+                                else:
+                                    st.error(f"Erro ao enviar: {response.status_code} - {response.text}")
+                            except Exception as e:
+                                st.error(f"Erro na requisição: {e}")
         
         except Exception as e:
             st.error(f"❌ Erro ao ler o arquivo: {str(e)}")
