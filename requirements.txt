@@ -1,1 +1,4 @@
-<<<<<<< HEA
+streamlit
+pandas
+openpyxl
+requests
