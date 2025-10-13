@@ -3,6 +3,13 @@ import pandas as pd
 import json
 import io
 from datetime import datetime
+import requests
+
+# Sidebar para configuração da API Nibo
+st.sidebar.header("Configuração Nibo")
+api_key = st.sidebar.text_input("API Key do Nibo", type="password")
+nibo_url = st.sidebar.text_input("URL da API Nibo", value="https://api.nibo.com.br/v1/endpoint")
+
 
 def ensure_exact_balance(cost_centers, target_total):
     """
@@ -58,6 +65,31 @@ def process_uploaded_file(uploaded_file, sheet_name):
         if value_col not in df.columns:
             st.error(f"❌ Coluna '{value_col}' não encontrada na planilha")
             return None
+        # ...existing code...
+        # Aqui você monta o JSON para enviar ao Nibo
+        # Exemplo fictício:
+        json_data = df.to_dict(orient='records')
+
+        st.write("## Pré-visualização do JSON gerado:")
+        st.json(json_data)
+
+        # Botão para enviar para Nibo
+        if st.button("Enviar para Nibo"):
+            if not api_key or not nibo_url:
+                st.error("Preencha a API Key e a URL da API!")
+            else:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                try:
+                    response = requests.post(nibo_url, json=json_data, headers=headers)
+                    if response.status_code == 200:
+                        st.success("Enviado com sucesso!")
+                    else:
+                        st.error(f"Erro ao enviar: {response.status_code} - {response.text}")
+                except Exception as e:
+                    st.error(f"Erro na requisição: {e}")
         
         # Substitui vírgulas por pontos nos valores
         df[value_col] = df[value_col].astype(str).str.replace(',', '.').str.strip()
@@ -198,6 +230,11 @@ def main():
         st.markdown("2. Selecione a aba correta")
         st.markdown("3. Ajuste diferenças se necessário")
         st.markdown("4. Baixe o JSON gerado")
+        
+        st.header("Configuração Nibo")
+        api_key = st.text_input("API Key do Nibo", type="password")
+        nibo_url = st.text_input("URL da API Nibo", value="https://api.nibo.com.br/v1/endpoint")
+
     
     # Upload do arquivo
     uploaded_file = st.file_uploader(
