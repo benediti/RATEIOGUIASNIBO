@@ -11,6 +11,37 @@ Configuração segura da API Nibo
     NIBO_API_URL=https://api.nibo.com.br/v1/endpoint
 
 Essas variáveis serão carregadas automaticamente e usadas para enviar o JSON para o Nibo.
+
+==============================
+Exemplo de requisição segura para Nibo
+==============================
+
+import os
+from dotenv import load_dotenv
+import requests
+import json
+
+# Carrega variáveis do .env
+load_dotenv()
+url = os.getenv("NIBO_API_URL")
+api_key = os.getenv("NIBO_API_KEY")
+
+# Exemplo de JSON para envio (substitua pelo seu JSON real)
+payload = {
+    "stakeholderId": "exemplo",
+    "description": "FGTS"
+    # ...demais campos...
+}
+
+headers = {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "Authorization": f"Bearer {api_key}"
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.status_code)
+print(response.text)
 """
 import streamlit as st
 import pandas as pd
@@ -259,40 +290,50 @@ def main():
                         st.metric("🏢 Total Centros Custo", f"R$ {total_cc:.2f}")
                     with col3:
                         st.metric("📊 Centros de Custo", len(result['costCenters']))
+                else:
+                    st.error("Nenhum JSON foi gerado. Verifique se a planilha está correta e tente novamente.")
+                    st.markdown("---")
+                    st.subheader("📝 Log de Envio para Nibo")
+                    st.info("O JSON não foi gerado. Não é possível enviar para o Nibo.")
 
-                    # Botão para enviar para Nibo
-                    import os
-                    from dotenv import load_dotenv
-                    import requests
-                    load_dotenv()
-                    api_key = os.getenv("NIBO_API_KEY")
-                    nibo_url = os.getenv("NIBO_API_URL")
-                    if st.button("🚀 Enviar para Nibo", type="secondary"):
-                        st.markdown("---")
-                        st.subheader("📝 Log de Envio para Nibo")
+                # Botão para enviar para Nibo e área de logs SEMPRE visíveis
+                import os
+                from dotenv import load_dotenv
+                import requests
+                load_dotenv()
+                api_key = os.getenv("NIBO_API_KEY")
+                nibo_url = os.getenv("NIBO_API_URL")
+                if st.button("🚀 Enviar para Nibo", type="secondary"):
+                    st.markdown("---")
+                    st.subheader("📝 Log de Envio para Nibo")
+                    if result:
                         st.write("**JSON enviado (body):**")
                         st.json(result)
-                        if not api_key or not nibo_url:
-                            st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
-                        else:
-                            headers = {
-                                "Authorization": f"Bearer {api_key}",
-                                "Content-Type": "application/json"
-                            }
+                    else:
+                        st.warning("Nenhum JSON disponível para envio.")
+                    if not api_key or not nibo_url:
+                        st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
+                    elif not result:
+                        st.error("Não há JSON para enviar. Gere o JSON primeiro.")
+                    else:
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json"
+                        }
+                        try:
+                            response = requests.post(nibo_url, json=result, headers=headers)
+                            st.write(f"**Status da resposta:** {response.status_code}")
+                            st.write("**Resposta:**")
                             try:
-                                response = requests.post(nibo_url, json=result, headers=headers)
-                                st.write(f"**Status da resposta:** {response.status_code}")
-                                st.write("**Resposta:**")
-                                try:
-                                    st.json(response.json())
-                                except Exception:
-                                    st.write(response.text)
-                                if response.status_code == 200:
-                                    st.success("Enviado com sucesso!")
-                                else:
-                                    st.error(f"Erro ao enviar: {response.status_code}")
-                            except Exception as e:
-                                st.error(f"Erro na requisição: {e}")
+                                st.json(response.json())
+                            except Exception:
+                                st.write(response.text)
+                            if response.status_code == 200:
+                                st.success("Enviado com sucesso!")
+                            else:
+                                st.error(f"Erro ao enviar: {response.status_code}")
+                        except Exception as e:
+                            st.error(f"Erro na requisição: {e}")
         
         except Exception as e:
             st.error(f"❌ Erro ao ler o arquivo: {str(e)}")
