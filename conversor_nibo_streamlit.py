@@ -303,37 +303,55 @@ def main():
                 load_dotenv()
                 api_key = os.getenv("NIBO_API_KEY")
                 nibo_url = os.getenv("NIBO_API_URL")
+                    # JSON de teste caso não tenha resultado
+                    json_teste = {
+                        "stakeholderId": "teste-stakeholder",
+                        "description": "Teste FGTS",
+                        "reference": "ITAU",
+                        "scheduleDate": "2025-04-20",
+                        "dueDate": "2025-04-20",
+                        "accrualDate": "2005-04-20",
+                        "categories": [
+                            {"categoryId": "teste-categoria", "value": 123.45}
+                        ],
+                        "costCenterValueType": 0,
+                        "costCenters": [
+                            {"costCenterId": "cc1", "value": 100.00},
+                            {"costCenterId": "cc2", "value": 23.45}
+                        ]
+                    }
                 if st.button("🚀 Enviar para Nibo", type="secondary"):
                     st.markdown("---")
                     st.subheader("📝 Log de Envio para Nibo")
-                    if result:
+                        # Decide qual JSON enviar
+                        json_envio = result if result else json_teste
                         st.write("**JSON enviado (body):**")
-                        st.json(result)
-                    else:
-                        st.warning("Nenhum JSON disponível para envio.")
-                    if not api_key or not nibo_url:
-                        st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
-                    elif not result:
-                        st.error("Não há JSON para enviar. Gere o JSON primeiro.")
-                    else:
-                        headers = {
-                            "Authorization": f"Bearer {api_key}",
-                            "Content-Type": "application/json"
-                        }
-                        try:
-                            response = requests.post(nibo_url, json=result, headers=headers)
-                            st.write(f"**Status da resposta:** {response.status_code}")
-                            st.write("**Resposta:**")
+                        st.json(json_envio)
+                        if not api_key or not nibo_url:
+                            st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
+                        else:
+                            headers = {
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json"
+                            }
                             try:
-                                st.json(response.json())
-                            except Exception:
-                                st.write(response.text)
-                            if response.status_code == 200:
-                                st.success("Enviado com sucesso!")
-                            else:
-                                st.error(f"Erro ao enviar: {response.status_code}")
-                        except Exception as e:
-                            st.error(f"Erro na requisição: {e}")
+                                st.write(f"**Endpoint:** {nibo_url}")
+                                st.write(f"**Headers:** {headers}")
+                                response = requests.post(nibo_url, json=json_envio, headers=headers)
+                                st.write(f"**Status da resposta:** {response.status_code}")
+                                st.write("**Resposta bruta:**")
+                                st.code(response.text)
+                                try:
+                                    st.write("**Resposta JSON:**")
+                                    st.json(response.json())
+                                except Exception:
+                                    st.warning("Resposta não é um JSON válido.")
+                                if response.status_code == 200:
+                                    st.success("Enviado com sucesso!")
+                                else:
+                                    st.error(f"Erro ao enviar: {response.status_code}")
+                            except Exception as e:
+                                st.error(f"Erro na requisição: {e}")
         
         except Exception as e:
             st.error(f"❌ Erro ao ler o arquivo: {str(e)}")
