@@ -268,6 +268,10 @@ def main():
                     api_key = os.getenv("NIBO_API_KEY")
                     nibo_url = os.getenv("NIBO_API_URL")
                     if st.button("🚀 Enviar para Nibo", type="secondary"):
+                        st.markdown("---")
+                        st.subheader("📝 Log de Envio para Nibo")
+                        st.write("**JSON enviado (body):**")
+                        st.json(result)
                         if not api_key or not nibo_url:
                             st.error("API Key ou URL da API Nibo não configuradas! Configure no arquivo .env ou nas variáveis de ambiente.")
                         else:
@@ -277,10 +281,16 @@ def main():
                             }
                             try:
                                 response = requests.post(nibo_url, json=result, headers=headers)
+                                st.write(f"**Status da resposta:** {response.status_code}")
+                                st.write("**Resposta:**")
+                                try:
+                                    st.json(response.json())
+                                except Exception:
+                                    st.write(response.text)
                                 if response.status_code == 200:
                                     st.success("Enviado com sucesso!")
                                 else:
-                                    st.error(f"Erro ao enviar: {response.status_code} - {response.text}")
+                                    st.error(f"Erro ao enviar: {response.status_code}")
                             except Exception as e:
                                 st.error(f"Erro na requisição: {e}")
         
