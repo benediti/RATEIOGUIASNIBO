@@ -177,15 +177,7 @@ def process_uploaded_file(uploaded_file, sheet_name):
                 }
             ],
             "costCenterValueType": 0,
-            "costCenters": cost_centers_json,
-            "recurrence": {
-                "enabled": False,
-                "intervaltype": 1,
-                "interval": 1,
-                "recurrenceendtype": 2,
-                "maxoccurrences": 0,
-                "enddate": end_date
-            }
+            "costCenters": cost_centers_json
         }
         
         return output
