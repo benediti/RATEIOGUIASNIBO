@@ -4,7 +4,7 @@ Este é um conversor web que transforma planilhas de rateio Excel em arquivos JS
 
 ## 🚀 Acesso Online
 
-**🔗 [Clique aqui para usar a aplicação](https://seu-app.streamlit.app)**
+> 💡 **Nota:** Para usar a aplicação online, faça o deploy no [Streamlit Community Cloud](https://streamlit.io/cloud) ou execute localmente seguindo as instruções abaixo.
 
 ## ✨ Funcionalidades
 
@@ -39,11 +39,40 @@ Sua planilha deve conter as seguintes colunas:
 - `date`: Data (opcional)
 - `accrualDate`: Data de competência (opcional)
 
-## 🔧 Executar Localmente
+## 📥 Como Baixar o Repositório
+
+Existem várias formas de baixar este repositório:
+
+### Opção 1: Usando Git (recomendado)
+
+Se você tem o Git instalado, abra o terminal e execute:
 
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/conversor-nibo
+git clone https://github.com/benediti/RATEIOGUIASNIBO.git
+```
+
+### Opção 2: Download como ZIP
+
+1. Acesse o repositório: https://github.com/benediti/RATEIOGUIASNIBO
+2. Clique no botão verde **"Code"** (ou **"<> Code"**)
+3. Selecione **"Download ZIP"**
+4. Extraia o arquivo ZIP no local desejado
+
+### Opção 3: Usando GitHub CLI
+
+Se você tem o GitHub CLI instalado:
+
+```bash
+gh repo clone benediti/RATEIOGUIASNIBO
+```
+
+## 🔧 Executar Localmente
+
+Após baixar o repositório, siga estes passos:
+
+```bash
+# Entre na pasta do projeto
+cd RATEIOGUIASNIBO
 
 # Instale as dependências
 pip install -r requirements.txt
