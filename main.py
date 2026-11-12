@@ -49,6 +49,7 @@ if "etapa_atual" not in st.session_state:
     st.session_state.etapa_atual = 0
     st.session_state.fornecedor_selecionado = None
     st.session_state.categoria_selecionada = None
+    st.session_state.categoria_uuid = None
     st.session_state.data_agendamento = datetime.now()
     st.session_state.data_vencimento = datetime.now() + timedelta(days=30)
     st.session_state.data_competencia = datetime.now()
@@ -95,10 +96,9 @@ def carregar_fornecedores_nibo():
         })
 
 @st.cache_data
-def carregar_centros_custo_validos():
-    """Carrega lista de centros de custo válidos do Nibo"""
+def carregar_centros_custo_nibo():
+    """Carrega lista completa de centros de custo com IDs de cliente"""
     try:
-        # Procurar arquivo de centros de custo
         caminhos_possiveis = [
             os.path.join(os.getcwd(), "centros_de_custo.xlsx"),
             os.path.join(os.path.dirname(__file__), "centros_de_custo.xlsx"),
@@ -108,22 +108,20 @@ def carregar_centros_custo_validos():
             if os.path.exists(caminho):
                 try:
                     df = pd.read_excel(caminho)
-                    # Assumir primeira coluna como ID do centro de custo
-                    if len(df) > 0:
-                        # Retornar lista de IDs válidos (converter para string)
-                        ids_validos = [str(val).strip() for val in df.iloc[:, 0] if pd.notna(val)]
-                        return ids_validos
+                    # Esperado: colunas 'ID EMPRESA', 'Nome Centro de Custo', 'ID Cliente'
+                    if 'ID EMPRESA' in df.columns and 'ID Cliente' in df.columns:
+                        return df
                 except Exception as e:
                     pass
         
-        # Retornar lista vazia se não encontrar
-        return []
+        # Retornar empty se não encontrar
+        return pd.DataFrame(columns=['ID EMPRESA', 'Nome Centro de Custo', 'ID Cliente'])
     except Exception as e:
-        return []
+        return pd.DataFrame(columns=['ID EMPRESA', 'Nome Centro de Custo', 'ID Cliente'])
 
 @st.cache_data
-def carregar_categorias_nibo():
-    """Carrega lista de categorias Nibo"""
+def carregar_categorias_mapeadas():
+    """Carrega lista de categorias com IDs"""
     try:
         caminhos_possiveis = [
             os.path.join(os.getcwd(), "categorias_nibo.xlsx"),
@@ -133,21 +131,21 @@ def carregar_categorias_nibo():
         for caminho in caminhos_possiveis:
             if os.path.exists(caminho):
                 df = pd.read_excel(caminho)
-                if len(df.columns) >= 1:
+                if 'Nome' in df.columns and 'ID' in df.columns:
                     return df
         
         # Retornar exemplo padrão
         return pd.DataFrame({
-            'Categoria': ['13º Salário 3212104', '14º Salário 3212105', 'Férias 3212106', 'FGTS 3212107'],
+            'Nome': ['13º Salário 3212104', '14º Salário 3212105', 'Férias 3212106', 'FGTS 3212107'],
             'ID': ['3212104', '3212105', '3212106', '3212107']
         })
     except Exception as e:
         return pd.DataFrame({
-            'Categoria': ['13º Salário 3212104', '14º Salário 3212105', 'Férias 3212106', 'FGTS 3212107'],
+            'Nome': ['13º Salário 3212104', '14º Salário 3212105', 'Férias 3212106', 'FGTS 3212107'],
             'ID': ['3212104', '3212105', '3212106', '3212107']
         })
 
-def gerar_json_postman_correto(
+def gerar_json_postman_correto_com_clientes(
     fornecedor_id: str,
     descricao: str,
     categoria_id: str,
@@ -155,16 +153,18 @@ def gerar_json_postman_correto(
     data_vencimento: str,
     data_accrual: str,
     centros_custo_df: pd.DataFrame,
+    centros_nibo_df: pd.DataFrame,
     referencia: str = "ITAU",
     cost_center_value_type: int = 0
 ) -> Dict:
     """
-    Gera JSON Postman correto com categories e costCenters mapeados corretamente.
+    Gera JSON Postman correto mapeando os centros com IDs de cliente.
     
     Structure:
     - categories[].categoryId: UUID da categoria
     - categories[].value: SOMA de todos os costCenters
-    - costCenters[].costCenterId: ID numérico (como string)
+    - costCenters[].costCenterId: ID EMPRESA (numérico)
+    - costCenters[].costCenterClientId: ID Cliente (UUID)
     - costCenters[].value: Valor individual desse centro
     
     Args:
@@ -174,7 +174,8 @@ def gerar_json_postman_correto(
         data_inicio: scheduleDate (YYYY-MM-DD)
         data_vencimento: dueDate (YYYY-MM-DD)
         data_accrual: accrualDate (YYYY-MM-DD)
-        centros_custo_df: DataFrame com colunas 'costCenterId' e 'value'
+        centros_custo_df: DataFrame com centros consolidados (colunas: 'costCenterId', 'value')
+        centros_nibo_df: DataFrame com mapeamento Nibo (colunas: 'ID EMPRESA', 'ID Cliente')
         referencia: reference (padrão: "ITAU")
         cost_center_value_type: tipo de valor (padrão: 0)
     
@@ -185,13 +186,28 @@ def gerar_json_postman_correto(
     # Calcular valor total (soma de todos os centros)
     valor_total = centros_custo_df['value'].sum()
     
-    # Preparar lista de centros de custo
+    # Preparar lista de centros de custo com mapeamento de cliente
     centros_lista = []
     for _, row in centros_custo_df.iterrows():
-        centros_lista.append({
-            "costCenterId": str(int(row['costCenterId'])),  # Converter para string
+        cost_center_id = str(int(row['costCenterId']))
+        
+        # Procurar ID Cliente no mapeamento Nibo
+        cliente_id = None
+        if not centros_nibo_df.empty:
+            match = centros_nibo_df[centros_nibo_df['ID EMPRESA'] == int(row['costCenterId'])]
+            if not match.empty:
+                cliente_id = match.iloc[0]['ID Cliente']
+        
+        centro = {
+            "costCenterId": cost_center_id,  # String numérica
             "value": float(row['value'])
-        })
+        }
+        
+        # Adicionar ID Cliente se encontrado
+        if cliente_id:
+            centro["costCenterClientId"] = cliente_id
+        
+        centros_lista.append(centro)
     
     # Montar JSON estruturado
     json_postman = {
@@ -330,7 +346,8 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
     Estrutura correta:
     - categories[].categoryId: UUID da categoria
     - categories[].value: SOMA de todos os costCenters
-    - costCenters[].costCenterId: ID numérico (como string)
+    - costCenters[].costCenterId: ID EMPRESA (numérico)
+    - costCenters[].costCenterClientId: ID Cliente (UUID)
     - costCenters[].value: Valor individual desse centro
     """
     
@@ -364,22 +381,33 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         consolidado = df.groupby('centro de custo')['valor'].sum().reset_index()
         consolidado.columns = ['costCenterId', 'value']
         
+        # Carregar mapeamentos
+        centros_nibo_df = carregar_centros_custo_nibo()
+        
         # Validar centros de custo
         centros_invalidos = []
-        centros_validos = carregar_centros_custo_validos()
+        centros_sem_cliente = []
         
         for _, row in consolidado.iterrows():
-            cost_center_id = str(row['costCenterId']).strip()
+            try:
+                cost_center_id = int(row['costCenterId'])
+            except:
+                centros_invalidos.append(str(row['costCenterId']))
+                continue
             
-            # Validar se centro de custo é válido (se lista não está vazia)
-            if centros_validos and cost_center_id not in centros_validos:
-                centros_invalidos.append(cost_center_id)
+            # Verificar se existe em Nibo
+            if not centros_nibo_df.empty:
+                match = centros_nibo_df[centros_nibo_df['ID EMPRESA'] == cost_center_id]
+                if match.empty:
+                    centros_invalidos.append(str(cost_center_id))
+                elif pd.isna(match.iloc[0]['ID Cliente']):
+                    centros_sem_cliente.append(str(cost_center_id))
         
         if consolidado.empty:
             return None, ["Erro: Nenhum dado válido encontrado na planilha"]
         
-        # Gerar JSON usando a função correta
-        json_rateio = gerar_json_postman_correto(
+        # Gerar JSON usando a função com mapeamento de clientes
+        json_rateio = gerar_json_postman_correto_com_clientes(
             fornecedor_id=fornecedor_id,
             descricao=f"Rateio - {categoria}",
             categoria_id=categoria,
@@ -387,6 +415,7 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
             data_vencimento=data_vencimento,
             data_accrual=data_competencia,
             centros_custo_df=consolidado,
+            centros_nibo_df=centros_nibo_df,
             referencia="ITAU",
             cost_center_value_type=0
         )
@@ -399,12 +428,13 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         
         # Se há centros inválidos, adicionar aviso
         if centros_invalidos:
-            mensagens.append("⚠️ ATENÇÃO: Centros de custo inválidos encontrados!")
+            mensagens.append("⚠️ ATENÇÃO: Centros de custo não encontrados no Nibo!")
             mensagens.append(f"   Inválidos: {', '.join(centros_invalidos)}")
-            if centros_validos:
-                amostra = ', '.join(centros_validos[:5])
-                mensagens.append(f"   Exemplo de válidos: {amostra}{'...' if len(centros_validos) > 5 else ''}")
             mensagens.append("   ⚠️ RISCO: Enviar para Nibo pode resultar em erro!")
+        
+        if centros_sem_cliente:
+            mensagens.append("⚠️ AVISO: Centros sem ID Cliente mapeado:")
+            mensagens.append(f"   {', '.join(centros_sem_cliente)}")
         
         # Adicionar resultado de validação JSON
         if json_valido:
@@ -540,25 +570,38 @@ with tab2:
     st.markdown("---")
     
     if st.session_state.fornecedor_selecionado is not None:
-        df_categorias = carregar_categorias_nibo()
+        df_categorias = carregar_categorias_mapeadas()
         
         if not df_categorias.empty:
-            col_categoria = df_categorias.columns[0]
+            col_nome = 'Nome'
+            col_id = 'ID'
             
-            opcoes_categoria = [str(row[col_categoria]) for idx, row in df_categorias.iterrows()]
+            opcoes_categoria = [str(row[col_nome]) for idx, row in df_categorias.iterrows()]
             
-            categoria_selecionada = st.selectbox(
+            categoria_idx = st.selectbox(
                 "Selecione a categoria:",
-                opcoes_categoria,
+                range(len(df_categorias)),
+                format_func=lambda x: opcoes_categoria[x],
                 key="select_categoria"
             )
             
-            st.session_state.categoria_selecionada = categoria_selecionada
+            categoria_row = df_categorias.iloc[categoria_idx]
+            categoria_nome = str(categoria_row[col_nome])
+            categoria_uuid = str(categoria_row[col_id])
+            
+            st.session_state.categoria_selecionada = categoria_nome
+            st.session_state.categoria_uuid = categoria_uuid
             st.session_state.etapa_atual = max(1, st.session_state.etapa_atual)
             
             # Mostrar detalhes
             st.markdown("### Detalhes da Categoria")
-            st.write(f"**Categoria:** {categoria_selecionada}")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**Categoria:** {categoria_nome}")
+            
+            with col2:
+                st.write(f"**ID:** `{categoria_uuid}`")
             
             # Botão para próxima etapa
             if st.button(" Confirmar e Próxima Etapa", type="primary", use_container_width=True, key="btn_cat"):
@@ -709,7 +752,7 @@ with tab5:
             json_gerado, mensagens = processar_resposta_fornecedor(
                 st.session_state.arquivo_enviado,
                 st.session_state.fornecedor_selecionado['id'],
-                st.session_state.categoria_selecionada,
+                st.session_state.categoria_uuid,  # Usar UUID ao invés do nome
                 st.session_state.data_vencimento.strftime('%Y-%m-%d'),
                 st.session_state.data_agendamento.strftime('%Y-%m-%d'),
                 st.session_state.data_competencia.strftime('%Y-%m-%d')
