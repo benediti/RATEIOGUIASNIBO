@@ -213,6 +213,7 @@ def gerar_json_postman_correto_com_clientes(
         "scheduleDate": data_inicio,
         "dueDate": data_vencimento,
         "accrualDate": data_accrual,
+        "value": round(valor_total, 2),  # Valor total de agendamento (NIBO espera isso!)
         "categories": [
             {
                 "categoryId": categoria_id,
