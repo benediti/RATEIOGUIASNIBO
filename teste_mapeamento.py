@@ -56,16 +56,15 @@ for _, row_entrada in df_entrada.iterrows():
     match = df_centros[df_centros['ID EMPRESA'] == centro_id]
     
     if not match.empty:
-        cliente_id = match.iloc[0]['ID Cliente']
+        cliente_id = match.iloc[0]['ID Cliente']  # UUID
         nome_centro = match.iloc[0]['Nome Centro de Custo']
         
         centros_mapeados.append({
-            "costCenterId": str(centro_id),
-            "costCenterClientId": cliente_id,
+            "costCenterId": cliente_id,  # ID Cliente (UUID) é o costCenterId!
             "costCenterName": nome_centro,
             "value": valor
         })
-        print(f"   [OK] {centro_id} -> {cliente_id[:8]}... (R$ {valor})")
+        print(f"   [OK] Centro {centro_id} -> costCenterId: {cliente_id[:8]}... (R$ {valor})")
     else:
         print(f"   [ERRO] {centro_id} -> NAO ENCONTRADO!")
 
@@ -91,7 +90,13 @@ json_final = {
         }
     ],
     "costCenterValueType": 0,
-    "costCenters": centros_mapeados
+    "costCenters": [
+        {
+            "costCenterId": centro["costCenterId"],  # ID Cliente (UUID)
+            "value": centro["value"]
+        }
+        for centro in centros_mapeados
+    ]
 }
 
 print(f"\n   Categoria: {categoria_nome}")

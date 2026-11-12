@@ -163,8 +163,7 @@ def gerar_json_postman_correto_com_clientes(
     Structure:
     - categories[].categoryId: UUID da categoria
     - categories[].value: SOMA de todos os costCenters
-    - costCenters[].costCenterId: ID EMPRESA (numérico)
-    - costCenters[].costCenterClientId: ID Cliente (UUID)
+    - costCenters[].costCenterId: ID Cliente (UUID) ← CORRETO!
     - costCenters[].value: Valor individual desse centro
     
     Args:
@@ -189,23 +188,20 @@ def gerar_json_postman_correto_com_clientes(
     # Preparar lista de centros de custo com mapeamento de cliente
     centros_lista = []
     for _, row in centros_custo_df.iterrows():
-        cost_center_id = str(int(row['costCenterId']))
+        centro_id_empresa = int(row['costCenterId'])
         
         # Procurar ID Cliente no mapeamento Nibo
         cliente_id = None
         if not centros_nibo_df.empty:
-            match = centros_nibo_df[centros_nibo_df['ID EMPRESA'] == int(row['costCenterId'])]
+            match = centros_nibo_df[centros_nibo_df['ID EMPRESA'] == centro_id_empresa]
             if not match.empty:
                 cliente_id = match.iloc[0]['ID Cliente']
         
+        # costCenterId = ID Cliente (UUID), não ID EMPRESA!
         centro = {
-            "costCenterId": cost_center_id,  # String numérica
+            "costCenterId": cliente_id if cliente_id else str(centro_id_empresa),  # UUID do cliente
             "value": float(row['value'])
         }
-        
-        # Adicionar ID Cliente se encontrado
-        if cliente_id:
-            centro["costCenterClientId"] = cliente_id
         
         centros_lista.append(centro)
     
