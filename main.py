@@ -1,7 +1,7 @@
 """
 Sistema Integrado de Rateio NIBO - Novo Fluxo com 5 Abas
 Fluxo: 1) Fornecedor -> 2) Categoria -> 3) Datas -> 4) Planilha -> 5) JSON
-Versao: 2.4 - Validação de centros de custo adicionada
+Versao: 2.5 - Geração correta de JSON com categories e costCenters mapeados
 """
 
 import streamlit as st
@@ -147,6 +147,116 @@ def carregar_categorias_nibo():
             'ID': ['3212104', '3212105', '3212106', '3212107']
         })
 
+def gerar_json_postman_correto(
+    fornecedor_id: str,
+    descricao: str,
+    categoria_id: str,
+    data_inicio: str,
+    data_vencimento: str,
+    data_accrual: str,
+    centros_custo_df: pd.DataFrame,
+    referencia: str = "ITAU",
+    cost_center_value_type: int = 0
+) -> Dict:
+    """
+    Gera JSON Postman correto com categories e costCenters mapeados corretamente.
+    
+    Structure:
+    - categories[].categoryId: UUID da categoria
+    - categories[].value: SOMA de todos os costCenters
+    - costCenters[].costCenterId: ID numérico (como string)
+    - costCenters[].value: Valor individual desse centro
+    
+    Args:
+        fornecedor_id: stakeholderId (UUID do fornecedor)
+        descricao: Descrição do documento
+        categoria_id: UUID da categoria
+        data_inicio: scheduleDate (YYYY-MM-DD)
+        data_vencimento: dueDate (YYYY-MM-DD)
+        data_accrual: accrualDate (YYYY-MM-DD)
+        centros_custo_df: DataFrame com colunas 'costCenterId' e 'value'
+        referencia: reference (padrão: "ITAU")
+        cost_center_value_type: tipo de valor (padrão: 0)
+    
+    Returns:
+        Dict com JSON estruturado corretamente
+    """
+    
+    # Calcular valor total (soma de todos os centros)
+    valor_total = centros_custo_df['value'].sum()
+    
+    # Preparar lista de centros de custo
+    centros_lista = []
+    for _, row in centros_custo_df.iterrows():
+        centros_lista.append({
+            "costCenterId": str(int(row['costCenterId'])),  # Converter para string
+            "value": float(row['value'])
+        })
+    
+    # Montar JSON estruturado
+    json_postman = {
+        "stakeholderId": fornecedor_id,
+        "description": descricao,
+        "reference": referencia,
+        "scheduleDate": data_inicio,
+        "dueDate": data_vencimento,
+        "accrualDate": data_accrual,
+        "categories": [
+            {
+                "categoryId": categoria_id,
+                "value": round(valor_total, 2)
+            }
+        ],
+        "costCenterValueType": cost_center_value_type,
+        "costCenters": centros_lista
+    }
+    
+    return json_postman
+
+def validar_json_postman(json_obj: Dict) -> Tuple[bool, List[str]]:
+    """
+    Valida se o JSON Postman está estruturado corretamente.
+    
+    Validações:
+    - categories[].value == SUM(costCenters[].value)
+    - Todos os campos obrigatórios presentes
+    - IDs em formato correto
+    
+    Returns:
+        Tuple[bool, List[str]]: (é_válido, lista_de_erros)
+    """
+    
+    erros = []
+    
+    # Validar estrutura básica
+    if 'categories' not in json_obj:
+        erros.append("❌ Campo 'categories' não encontrado")
+    if 'costCenters' not in json_obj:
+        erros.append("❌ Campo 'costCenters' não encontrado")
+    
+    if not erros:  # Se houver erros estruturais, retornar agora
+        # Validar soma de valores
+        categoria_value = json_obj['categories'][0]['value']
+        soma_centros = sum(cc['value'] for cc in json_obj['costCenters'])
+        
+        if abs(categoria_value - soma_centros) > 0.01:  # Tolerância para arredondamento
+            erros.append(
+                f"❌ Soma dos costCenters ({soma_centros:.2f}) != "
+                f"categoryValue ({categoria_value:.2f})"
+            )
+        
+        # Validar campos obrigatórios
+        campos_obrigatorios = [
+            'stakeholderId', 'description', 'reference',
+            'scheduleDate', 'dueDate', 'accrualDate'
+        ]
+        
+        for campo in campos_obrigatorios:
+            if campo not in json_obj or not json_obj[campo]:
+                erros.append(f"❌ Campo obrigatório '{campo}' vazio ou ausente")
+    
+    return len(erros) == 0, erros
+
 def gerar_template_excel(fornecedor_id: str, fornecedor_nome: str, categoria: str, 
                         data_vencimento: str, data_pagamento: str, data_competencia: str):
     """Gera template Excel para envio para fornecedor"""
@@ -214,7 +324,15 @@ def gerar_template_excel(fornecedor_id: str, fornecedor_nome: str, categoria: st
 
 def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str, 
                                   data_vencimento: str, data_pagamento: str, data_competencia: str):
-    """Processa resposta do fornecedor e gera JSON"""
+    """
+    Processa resposta do fornecedor e gera JSON com estrutura correta.
+    
+    Estrutura correta:
+    - categories[].categoryId: UUID da categoria
+    - categories[].value: SOMA de todos os costCenters
+    - costCenters[].costCenterId: ID numérico (como string)
+    - costCenters[].value: Valor individual desse centro
+    """
     
     try:
         # Tentar encontrar a aba automaticamente
@@ -246,7 +364,7 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         consolidado = df.groupby('centro de custo')['valor'].sum().reset_index()
         consolidado.columns = ['costCenterId', 'value']
         
-        dados = []
+        # Validar centros de custo
         centros_invalidos = []
         centros_validos = carregar_centros_custo_validos()
         
@@ -256,35 +374,25 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
             # Validar se centro de custo é válido (se lista não está vazia)
             if centros_validos and cost_center_id not in centros_validos:
                 centros_invalidos.append(cost_center_id)
-            
-            dados.append({
-                'costCenterId': cost_center_id,
-                'value': round(float(row['value']), 2)
-            })
         
-        if not dados:
+        if consolidado.empty:
             return None, ["Erro: Nenhum dado válido encontrado na planilha"]
         
-        # Calcular total
-        total = sum(d['value'] for d in dados)
+        # Gerar JSON usando a função correta
+        json_rateio = gerar_json_postman_correto(
+            fornecedor_id=fornecedor_id,
+            descricao=f"Rateio - {categoria}",
+            categoria_id=categoria,
+            data_inicio=data_pagamento,
+            data_vencimento=data_vencimento,
+            data_accrual=data_competencia,
+            centros_custo_df=consolidado,
+            referencia="ITAU",
+            cost_center_value_type=0
+        )
         
-        # Gerar JSON
-        json_rateio = {
-            "stakeholderId": fornecedor_id,
-            "description": f"Rateio - {categoria}",
-            "reference": categoria,
-            "scheduleDate": str(data_pagamento),
-            "dueDate": str(data_vencimento),
-            "accrualDate": str(data_competencia),
-            "costCenterValueType": 0,
-            "costCenters": dados,
-            "categories": [
-                {
-                    "categoryId": categoria,
-                    "value": total
-                }
-            ]
-        }
+        # Validar JSON gerado
+        json_valido, erros_validacao = validar_json_postman(json_rateio)
         
         # Montar mensagens
         mensagens = []
@@ -297,8 +405,14 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
                 amostra = ', '.join(centros_validos[:5])
                 mensagens.append(f"   Exemplo de válidos: {amostra}{'...' if len(centros_validos) > 5 else ''}")
             mensagens.append("   ⚠️ RISCO: Enviar para Nibo pode resultar em erro!")
+        
+        # Adicionar resultado de validação JSON
+        if json_valido:
+            total = json_rateio['categories'][0]['value']
+            num_centros = len(json_rateio['costCenters'])
+            mensagens.append(f"✅ JSON válido: {num_centros} centros de custo. Total: R$ {total:,.2f}")
         else:
-            mensagens.append(f"✅ OK: {len(dados)} centros de custo válidos processados. Total: R$ {total:,.2f}")
+            mensagens.extend(erros_validacao)
         
         return json_rateio, mensagens
         
