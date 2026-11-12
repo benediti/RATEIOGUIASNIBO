@@ -1,0 +1,81 @@
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.local
+
+# Excel temporário (arquivos de backup)
+~$*.xlsx
+*.tmp
+
+# Logs
+*.log
+
+# Cache do projeto
+.cache/
+
+# Arquivos de teste local (manter template oficial)
+test_*.py
+*_test.xlsx
+Exemplo*.xlsx
+Template_*.xlsx
+IMPORT_DE_RATEIO_POR_CONTA.xlsx
+
+# Documentação local
+LEIA-ME.txt
+CORRECAO_BUGS.md
+RESUMO*.txt
+README_NOVO_FLUXO.md
+VERIFICAR_STATUS.ps1
+
+# Backups
+*_backup*.py
+main_novo_fluxo.py
+pagina_enviar_rateio.py
+modulo_*.py
+start_*.py
