@@ -1,0 +1,44 @@
+# REFERENCIA RAPIDA - Sistema Rateio NIBO
+
+## TESTE LOCAL
+```bash
+streamlit run main.py
+```
+Acessa: http://localhost:8501
+
+## DEPLOY NA NUVEM
+1. https://share.streamlit.io/
+2. "+ New app"
+3. benediti/RATEIOGUIASNIBO / main / main.py
+4. Deploy
+
+## FLUXO DE 5 ABAS
+
+ABA 1: Selecionar Fornecedor
+└─ Escolhe qual fornecedor processar
+
+ABA 2: Selecionar Categoria  
+└─ Define a categoria de despesa
+
+ABA 3: Configurar Datas
+└─ Vencimento, Pagamento, Competência
+
+ABA 4: Enviar Planilha Excel
+└─ Upload e validação de dados
+└─ Estrutura: idsetor | valor
+
+ABA 5: Gerar JSON
+└─ Consolida centros de custo
+└─ Gera JSON para API Nibo
+└─ Download do arquivo
+
+## STATUS
+✅ Código: Pronto
+✅ Testes: Passando
+✅ Repositório: Sincronizado
+✅ Configuração: Completa
+✅ Documentação: Feita
+
+## FILA PARA DEPLOY
+Nenhuma ação local restante.
+Sistema 100% pronto para Streamlit Cloud.
