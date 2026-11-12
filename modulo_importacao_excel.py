@@ -60,9 +60,10 @@ def listar_abas_excel(arquivo) -> List[str]:
 def importar_dados_projeto(arquivo, sheet_name: str = "projeto") -> Tuple[pd.DataFrame, List[str]]:
     """
     Importa dados da aba 'projeto' do arquivo Excel
+    Detecta automaticamente colunas de ID, centro de custo e valor
     
     Retorna:
-        - DataFrame com os dados
+        - DataFrame com os dados padronizados
         - Lista de erros/avisos (vazio se tudo OK)
     """
     erros = []
@@ -72,65 +73,84 @@ def importar_dados_projeto(arquivo, sheet_name: str = "projeto") -> Tuple[pd.Dat
         df = pd.read_excel(arquivo, sheet_name=sheet_name)
         
         if df.empty:
-            erros.append(f"⚠️ Aba '{sheet_name}' está vazia")
+            erros.append(f"Aba '{sheet_name}' está vazia")
             return df, erros
         
-        # Verificar colunas esperadas (case-insensitive)
+        # Criar mapa de colunas normalizadas
         colunas_normalizado = {col.lower().strip(): col for col in df.columns}
+        colunas_lista = list(colunas_normalizado.keys())
         
-        colunas_necessarias = ['fornecedor', 'centro de custo', 'valor']
-        colunas_encontradas = {}
+        # Detectar coluna de VALOR (procura por: valor, value, amount, total)
+        col_valor = None
+        valor_keywords = ['valor', 'value', 'amount', 'total', 'montante']
+        for keyword in valor_keywords:
+            matches = [c for c in colunas_lista if keyword in c]
+            if matches:
+                col_valor = colunas_normalizado[matches[0]]
+                break
         
-        for col_necessaria in colunas_necessarias:
-            if col_necessaria in colunas_normalizado:
-                colunas_encontradas[col_necessaria] = colunas_normalizado[col_necessaria]
-            else:
-                # Tentar encontrar colunas parciais
-                matches = [k for k in colunas_normalizado.keys() if col_necessaria in k]
-                if matches:
-                    colunas_encontradas[col_necessaria] = colunas_normalizado[matches[0]]
+        if col_valor is None:
+            # Se não encontrou, usar última coluna como valor
+            col_valor = df.columns[-1]
+            erros.append(f"Coluna 'valor' não encontrada explicitamente. Usando '{col_valor}'")
         
-        if len(colunas_encontradas) < len(colunas_necessarias):
-            faltantes = [c for c in colunas_necessarias if c not in colunas_encontradas]
-            erros.append(f"⚠️ Colunas não encontradas: {', '.join(faltantes)}")
-            erros.append(f"ℹ️ Colunas disponíveis: {', '.join(df.columns)}")
-            return df, erros
+        # Detectar coluna de ID/Centro de Custo (procura por: centro, id, setor, codigo, code)
+        col_id = None
+        id_keywords = ['centro', 'id', 'setor', 'codigo', 'code', 'center', 'idsetor']
+        for keyword in id_keywords:
+            matches = [c for c in colunas_lista if keyword in c and c != col_valor.lower()]
+            if matches:
+                col_id = colunas_normalizado[matches[0]]
+                break
         
-        # Renomear colunas para padrão
-        df = df.rename(columns={v: k for k, v in colunas_encontradas.items()})
+        if col_id is None:
+            # Se não encontrou ID separado, usar primeira coluna
+            col_id = df.columns[0]
+            erros.append(f"Coluna 'centro de custo/ID' não encontrada. Usando '{col_id}'")
+        
+        # Detectar coluna de FORNECEDOR (procura por: fornecedor, vendor, supplier)
+        col_fornecedor = None
+        fornecedor_keywords = ['fornecedor', 'vendor', 'supplier', 'provider']
+        for keyword in fornecedor_keywords:
+            matches = [c for c in colunas_lista if keyword in c]
+            if matches:
+                col_fornecedor = colunas_normalizado[matches[0]]
+                break
+        
+        # Se não houver coluna de fornecedor, criar uma com valor fixo
+        if col_fornecedor is None:
+            erros.append("Coluna 'fornecedor' não encontrada. Usando valor padrão.")
+            df['fornecedor'] = 'FORNECEDOR_UNICO'
+            col_fornecedor = 'fornecedor'
+        
+        # Criar dataframe padronizado
+        df_novo = pd.DataFrame()
+        df_novo['fornecedor'] = df[col_fornecedor].astype(str).str.strip()
+        df_novo['centro de custo'] = df[col_id].astype(str).str.strip()
+        df_novo['valor'] = df[col_valor].apply(converter_valor_numerico)
         
         # Remover linhas completamente vazias
-        df = df.dropna(how='all')
-        
-        # Converter valores
-        df['valor'] = df['valor'].apply(converter_valor_numerico)
+        df_novo = df_novo.dropna(how='all')
         
         # Remover linhas onde valor é 0 ou nulo
-        df = df[df['valor'] > 0]
+        df_novo = df_novo[df_novo['valor'] > 0]
         
-        if df.empty:
-            erros.append("⚠️ Nenhuma linha com valor válido foi encontrada")
-            return df, erros
+        if df_novo.empty:
+            erros.append("Nenhuma linha com valor válido foi encontrada")
+            return df_novo, erros
         
         # Validar dados
-        if df['fornecedor'].isna().any():
-            linhas_na = df[df['fornecedor'].isna()].index.tolist()
-            erros.append(f"⚠️ Linhas com fornecedor vazio: {linhas_na}")
-            df = df.dropna(subset=['fornecedor'])
+        if df_novo['fornecedor'].isna().any():
+            df_novo = df_novo.dropna(subset=['fornecedor'])
         
-        if df['centro de custo'].isna().any():
-            linhas_na = df[df['centro de custo'].isna()].index.tolist()
-            erros.append(f"⚠️ Linhas com centro de custo vazio: {linhas_na}")
-            df = df.dropna(subset=['centro de custo'])
+        if df_novo['centro de custo'].isna().any():
+            df_novo = df_novo.dropna(subset=['centro de custo'])
         
-        # Limpar valores de texto
-        df['fornecedor'] = df['fornecedor'].astype(str).str.strip()
-        df['centro de custo'] = df['centro de custo'].astype(str).str.strip()
-        
-        return df, erros
+        erros.append(f"OK: {len(df_novo)} linhas importadas com sucesso")
+        return df_novo, erros
         
     except Exception as e:
-        erros.append(f"❌ Erro ao importar: {str(e)}")
+        erros.append(f"Erro ao importar: {str(e)}")
         return pd.DataFrame(), erros
 
 

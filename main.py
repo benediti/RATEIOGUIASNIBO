@@ -193,60 +193,47 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
     """Processa resposta do fornecedor e gera JSON"""
     
     try:
-        # Tentar ler a aba "Rateio"
+        # Tentar encontrar a aba automaticamente
         try:
-            df = pd.read_excel(arquivo, sheet_name="Rateio")
-        except:
-            # Se não existir, tentar ler a primeira aba
-            df = pd.read_excel(arquivo, sheet_name=0)
-        
-        # Tentar validar headers na linha 9 (índice 8)
-        if len(df) > 8:
-            headers = [str(df.iloc[8, 0]).strip().lower(), str(df.iloc[8, 1]).strip().lower()]
+            abas = listar_abas_excel(arquivo)
+            aba_selecionada = None
             
-            if headers[0] != 'idsetor' or headers[1] != 'valor':
-                # Se não encontrar na linha 9, procurar em outras linhas
-                found = False
-                for row_idx in range(len(df)):
-                    if (str(df.iloc[row_idx, 0]).strip().lower() == 'idsetor' and 
-                        str(df.iloc[row_idx, 1]).strip().lower() == 'valor'):
-                        # Encontrou headers, usar próxima linha como início dos dados
-                        data_start_row = row_idx + 1
-                        headers_row = row_idx
-                        found = True
-                        break
-                
-                if not found:
-                    return None, ["Erro: Não foram encontrados headers 'idsetor' e 'valor' no arquivo"]
-            else:
-                data_start_row = 9
-                headers_row = 8
-        else:
-            return None, ["Erro: Arquivo Excel muito curto ou vazio"]
+            # Procurar por aba com nomes comuns
+            for nome_aba in ['projeto', 'rateio', 'dados', 'plan', 'sheet1']:
+                if nome_aba.lower() in [a.lower() for a in abas]:
+                    aba_selecionada = [a for a in abas if a.lower() == nome_aba.lower()][0]
+                    break
+            
+            # Se não encontrou, usar primeira aba
+            if aba_selecionada is None:
+                aba_selecionada = abas[0]
+            
+            # Importar dados
+            df, erros_import = importar_dados_projeto(arquivo, sheet_name=aba_selecionada)
+            
+            if df.empty:
+                mensagens = ["Erro ao importar dados:"] + erros_import
+                return None, mensagens
+            
+        except Exception as e:
+            return None, [f"Erro ao importar arquivo: {str(e)}"]
         
-        # Ler dados a partir da linha indicada
+        # Consolidar por centro de custo
+        consolidado = df.groupby('centro de custo')['valor'].sum().reset_index()
+        consolidado.columns = ['costCenterId', 'value']
+        
         dados = []
-        for idx in range(data_start_row, len(df)):
-            try:
-                idsetor_val = str(df.iloc[idx, 0]).strip()
-                valor_str = df.iloc[idx, 1]
-                
-                # Pular linhas vazias
-                if pd.isna(valor_str) or str(valor_str).strip() == '':
-                    continue
-                
-                valor = converter_valor_numerico(valor_str)
-                
-                if valor > 0 and idsetor_val and idsetor_val != 'nan' and idsetor_val.upper() != 'IDSETOR':
-                    dados.append({
-                        'idsetor': idsetor_val,
-                        'valor': valor
-                    })
-            except:
-                continue
+        for _, row in consolidado.iterrows():
+            dados.append({
+                'costCenterId': str(row['costCenterId']).strip(),
+                'valor': round(float(row['value']), 2)
+            })
         
         if not dados:
-            return None, ["Erro: Nenhum dado válido encontrado na planilha. Verifique se tem dados nas colunas idsetor e valor"]
+            return None, ["Erro: Nenhum dado válido encontrado na planilha"]
+        
+        # Calcular total
+        total = sum(d['valor'] for d in dados)
         
         # Gerar JSON
         json_rateio = {
@@ -257,23 +244,15 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
             "dueDate": str(data_vencimento),
             "accrualDate": str(data_competencia),
             "costCenterValueType": 0,
-            "costCenters": [
-                {
-                    "costCenterId": d['idsetor'],
-                    "value": d['valor']
-                }
-                for d in dados
-            ],
+            "costCenters": dados,
             "categories": [
                 {
                     "categoryId": categoria,
-                    "value": sum(d['valor'] for d in dados)
+                    "value": total
                 }
             ]
         }
         
-        # Validar JSON
-        total = sum(cc['value'] for cc in json_rateio['costCenters'])
         mensagens = [f"OK: {len(dados)} centros de custo processados. Total: R$ {total:,.2f}"]
         
         return json_rateio, mensagens
