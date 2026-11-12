@@ -36,7 +36,7 @@ from modulo_consolidacao_rateio import (
 # ========================================
 st.set_page_config(
     page_title="Rateio NIBO - Novo Fluxo",
-    page_icon="💰",
+    page_icon="$",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -68,8 +68,6 @@ def carregar_fornecedores_nibo():
         caminhos_possiveis = [
             os.path.join(os.getcwd(), "fornecedores_nibo.xlsx"),
             os.path.join(os.path.dirname(__file__), "fornecedores_nibo.xlsx"),
-            "C:\\Users\\bened\\Enviar-Rateio-25\\projeto\\fornecedores_nibo.xlsx",
-            "C:\\Users\\bened\\RATEIOGUIASNIBO\\fornecedores_nibo.xlsx",
         ]
         
         for caminho in caminhos_possiveis:
@@ -102,8 +100,6 @@ def carregar_categorias_nibo():
         caminhos_possiveis = [
             os.path.join(os.getcwd(), "categorias_nibo.xlsx"),
             os.path.join(os.path.dirname(__file__), "categorias_nibo.xlsx"),
-            "C:\\Users\\bened\\Enviar-Rateio-25\\projeto\\categorias_nibo.xlsx",
-            "C:\\Users\\bened\\RATEIOGUIASNIBO\\categorias_nibo.xlsx",
         ]
         
         for caminho in caminhos_possiveis:
@@ -276,7 +272,7 @@ st.markdown("""
     }
 </style>
 <div class="header-main">
-    <h1>💰 Sistema de Rateio NIBO - Novo Fluxo</h1>
+    <h1> Sistema de Rateio NIBO - Novo Fluxo</h1>
     <p>Gestão Integrada: Fornecedor → Categoria → Datas → Planilha → JSON</p>
 </div>
 """, unsafe_allow_html=True)
@@ -287,27 +283,27 @@ st.markdown("---")
 # SIDEBAR - RESUMO DO FLUXO
 # ========================================
 with st.sidebar:
-    st.subheader("📋 Resumo do Fluxo")
+    st.subheader(" Resumo do Fluxo")
     
     # Indicador de progresso
     etapas = [
-        "1️⃣ Fornecedor",
-        "2️⃣ Categoria",
-        "3️⃣ Datas",
-        "4️⃣ Planilha",
-        "5️⃣ JSON"
+        "1⃣ Fornecedor",
+        "2⃣ Categoria",
+        "3⃣ Datas",
+        "4⃣ Planilha",
+        "5⃣ JSON"
     ]
     
     for i, etapa in enumerate(etapas):
         if i <= st.session_state.etapa_atual:
-            st.markdown(f"✅ {etapa}")
+            st.markdown(f" {etapa}")
         else:
-            st.markdown(f"⭕ {etapa}")
+            st.markdown(f" {etapa}")
     
     st.markdown("---")
     
     # Botão Reset
-    if st.button("🔄 Reiniciar Fluxo", use_container_width=True):
+    if st.button(" Reiniciar Fluxo", use_container_width=True):
         for key in st.session_state.keys():
             del st.session_state[key]
         st.rerun()
@@ -316,11 +312,11 @@ with st.sidebar:
 # ABA 1: SELECIONAR FORNECEDOR
 # ========================================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "1️⃣ Fornecedor",
-    "2️⃣ Categoria",
-    "3️⃣ Datas",
-    "4️⃣ Planilha",
-    "5️⃣ JSON"
+    "1⃣ Fornecedor",
+    "2⃣ Categoria",
+    "3⃣ Datas",
+    "4⃣ Planilha",
+    "5⃣ JSON"
 ])
 
 with tab1:
@@ -365,7 +361,7 @@ with tab1:
             st.write(f"**ID:** `{st.session_state.fornecedor_selecionado['id']}`")
         
         # Botão para próxima etapa
-        if st.button("✅ Confirmar e Próxima Etapa", type="primary", use_container_width=True):
+        if st.button(" Confirmar e Próxima Etapa", type="primary", use_container_width=True):
             st.session_state.etapa_atual = 1
             st.rerun()
     else:
@@ -402,13 +398,13 @@ with tab2:
             st.write(f"**Categoria:** {categoria_selecionada}")
             
             # Botão para próxima etapa
-            if st.button("✅ Confirmar e Próxima Etapa", type="primary", use_container_width=True, key="btn_cat"):
+            if st.button(" Confirmar e Próxima Etapa", type="primary", use_container_width=True, key="btn_cat"):
                 st.session_state.etapa_atual = 2
                 st.rerun()
         else:
             st.warning("Nenhuma categoria disponível")
     else:
-        st.info("👈 Selecione um fornecedor na aba anterior primeiro")
+        st.info(" Selecione um fornecedor na aba anterior primeiro")
 
 # ========================================
 # ABA 3: SELECIONAR DATAS
@@ -424,7 +420,7 @@ with tab3:
         
         with col1:
             data_agendamento = st.date_input(
-                "📅 Data de Agendamento:",
+                " Data de Agendamento:",
                 value=st.session_state.data_agendamento,
                 key="date_agendamento"
             )
@@ -432,7 +428,7 @@ with tab3:
         
         with col2:
             data_vencimento = st.date_input(
-                "📅 Data de Vencimento:",
+                " Data de Vencimento:",
                 value=st.session_state.data_vencimento,
                 key="date_vencimento"
             )
@@ -440,7 +436,7 @@ with tab3:
         
         with col3:
             data_competencia = st.date_input(
-                "📅 Data de Competência:",
+                " Data de Competência:",
                 value=st.session_state.data_competencia,
                 key="date_competencia"
             )
@@ -462,11 +458,11 @@ with tab3:
             st.write(f"**Competência:** {data_competencia.strftime('%d/%m/%Y')}")
         
         # Botão para próxima etapa
-        if st.button("✅ Confirmar e Próxima Etapa", type="primary", use_container_width=True, key="btn_data"):
+        if st.button(" Confirmar e Próxima Etapa", type="primary", use_container_width=True, key="btn_data"):
             st.session_state.etapa_atual = 3
             st.rerun()
     else:
-        st.info("👈 Selecione a categoria na aba anterior primeiro")
+        st.info(" Selecione a categoria na aba anterior primeiro")
 
 # ========================================
 # ABA 4: UPLOAD PLANILHA
@@ -479,7 +475,7 @@ with tab4:
     
     if st.session_state.data_competencia is not None:
         # Opção 1: Download do template
-        st.subheader("📥 Baixar Template")
+        st.subheader(" Baixar Template")
         st.write("Clique no botão abaixo para baixar um template pronto para enviar ao fornecedor:")
         
         if st.session_state.fornecedor_selecionado is not None and st.session_state.categoria_selecionada is not None:
@@ -503,7 +499,7 @@ with tab4:
             buffer.seek(0)
             
             st.download_button(
-                label="📥 Baixar Template Excel",
+                label=" Baixar Template Excel",
                 data=buffer.getvalue(),
                 file_name=f"Template_Rateio_{fornecedor_nome.replace(' ', '_')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -513,7 +509,7 @@ with tab4:
         st.markdown("---")
         
         # Opção 2: Upload do arquivo preenchido
-        st.subheader("📤 Upload do Arquivo Preenchido")
+        st.subheader(" Upload do Arquivo Preenchido")
         st.write("Envie a planilha preenchida pelo fornecedor:")
         
         arquivo_enviado = st.file_uploader(
@@ -524,16 +520,16 @@ with tab4:
         
         if arquivo_enviado:
             st.session_state.arquivo_enviado = arquivo_enviado
-            st.success("✅ Arquivo carregado com sucesso!")
+            st.success(" Arquivo carregado com sucesso!")
             
             st.session_state.etapa_atual = max(3, st.session_state.etapa_atual)
             
             # Botão para próxima etapa
-            if st.button("✅ Processar e Ir para Próxima Etapa", type="primary", use_container_width=True, key="btn_upload"):
+            if st.button(" Processar e Ir para Próxima Etapa", type="primary", use_container_width=True, key="btn_upload"):
                 st.session_state.etapa_atual = 4
                 st.rerun()
     else:
-        st.info("👈 Defina as datas na aba anterior primeiro")
+        st.info(" Defina as datas na aba anterior primeiro")
 
 # ========================================
 # ABA 5: GERAR E BAIXAR JSON
@@ -558,7 +554,7 @@ with tab5:
         
         # Exibir mensagens
         for msg in mensagens:
-            if "Erro" in msg or "❌" in msg:
+            if "Erro" in msg or "" in msg:
                 st.error(msg)
             else:
                 st.success(msg)
@@ -573,7 +569,7 @@ with tab5:
     
     if st.session_state.processado and st.session_state.rateios:
         # Exibir JSON
-        st.subheader("📊 Informações do Rateio")
+        st.subheader(" Informações do Rateio")
         
         fornecedor_id = list(st.session_state.rateios.keys())[0]
         json_rateio = st.session_state.rateios[fornecedor_id]
@@ -591,7 +587,7 @@ with tab5:
             st.write(f"**Data de Competência:** {json_rateio.get('accrualDate', 'N/A')}")
         
         # Centros de custo
-        st.subheader("💰 Centros de Custo")
+        st.subheader(" Centros de Custo")
         df_centros = pd.DataFrame(json_rateio.get('costCenters', []))
         st.dataframe(df_centros, use_container_width=True)
         
@@ -600,19 +596,19 @@ with tab5:
         st.metric("Valor Total", f"R$ {total_rateio:,.2f}")
         
         # JSON formatado
-        st.subheader("📄 JSON para API Nibo")
+        st.subheader(" JSON para API Nibo")
         json_formatado = json.dumps(json_rateio, indent=2, ensure_ascii=False)
         st.code(json_formatado, language="json")
         
         # Downloads
         st.markdown("---")
-        st.subheader("💾 Download")
+        st.subheader(" Download")
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.download_button(
-                label="📥 Download JSON",
+                label=" Download JSON",
                 data=json_formatado,
                 file_name=f"rateio_{fornecedor_id[:8]}.json",
                 mime="application/json",
@@ -621,14 +617,14 @@ with tab5:
         
         with col2:
             st.download_button(
-                label="📥 Download Planilha (CSV)",
+                label=" Download Planilha (CSV)",
                 data=st.session_state.arquivo_enviado.getvalue().decode('utf-8') if isinstance(st.session_state.arquivo_enviado.getvalue(), bytes) else st.session_state.arquivo_enviado.getvalue(),
                 file_name=f"rateio_dados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
     else:
-        st.info("👈 Envie a planilha preenchida na aba anterior")
+        st.info(" Envie a planilha preenchida na aba anterior")
 
 # ========================================
 # FOOTER
@@ -636,8 +632,8 @@ with tab5:
 st.markdown("---")
 st.markdown("""
 **Dúvidas?**
-- ✅ Formato de data: DD/MM/YYYY
-- 💰 Valores: use ponto (.) ou vírgula (,) como separador decimal
-- 🆔 ID Setor: copie exatamente do arquivo de centros de custo
-- 📧 Suporte: contato@equippe.com.br
+-  Formato de data: DD/MM/YYYY
+-  Valores: use ponto (.) ou vírgula (,) como separador decimal
+-  ID Setor: copie exatamente do arquivo de centros de custo
+-  Suporte: contato@equippe.com.br
 """)
