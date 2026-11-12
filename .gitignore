@@ -77,5 +77,4 @@ VERIFICAR_STATUS.ps1
 *_backup*.py
 main_novo_fluxo.py
 pagina_enviar_rateio.py
-modulo_*.py
 start_*.py
