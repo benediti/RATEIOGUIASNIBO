@@ -95,6 +95,33 @@ def carregar_fornecedores_nibo():
         })
 
 @st.cache_data
+def carregar_centros_custo_validos():
+    """Carrega lista de centros de custo válidos do Nibo"""
+    try:
+        # Procurar arquivo de centros de custo
+        caminhos_possiveis = [
+            os.path.join(os.getcwd(), "centros_de_custo.xlsx"),
+            os.path.join(os.path.dirname(__file__), "centros_de_custo.xlsx"),
+        ]
+        
+        for caminho in caminhos_possiveis:
+            if os.path.exists(caminho):
+                try:
+                    df = pd.read_excel(caminho)
+                    # Assumir primeira coluna como ID do centro de custo
+                    if len(df) > 0:
+                        # Retornar lista de IDs válidos (converter para string)
+                        ids_validos = [str(val).strip() for val in df.iloc[:, 0] if pd.notna(val)]
+                        return ids_validos
+                except Exception as e:
+                    pass
+        
+        # Retornar lista vazia se não encontrar
+        return []
+    except Exception as e:
+        return []
+
+@st.cache_data
 def carregar_categorias_nibo():
     """Carrega lista de categorias Nibo"""
     try:
@@ -220,9 +247,18 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         consolidado.columns = ['costCenterId', 'value']
         
         dados = []
+        centros_invalidos = []
+        centros_validos = carregar_centros_custo_validos()
+        
         for _, row in consolidado.iterrows():
+            cost_center_id = str(row['costCenterId']).strip()
+            
+            # Validar se centro de custo é válido (se lista não está vazia)
+            if centros_validos and cost_center_id not in centros_validos:
+                centros_invalidos.append(cost_center_id)
+            
             dados.append({
-                'costCenterId': str(row['costCenterId']).strip(),
+                'costCenterId': cost_center_id,
                 'value': round(float(row['value']), 2)
             })
         
@@ -250,7 +286,19 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
             ]
         }
         
-        mensagens = [f"OK: {len(dados)} centros de custo processados. Total: R$ {total:,.2f}"]
+        # Montar mensagens
+        mensagens = []
+        
+        # Se há centros inválidos, adicionar aviso
+        if centros_invalidos:
+            mensagens.append("⚠️ ATENÇÃO: Centros de custo inválidos encontrados!")
+            mensagens.append(f"   Inválidos: {', '.join(centros_invalidos)}")
+            if centros_validos:
+                amostra = ', '.join(centros_validos[:5])
+                mensagens.append(f"   Exemplo de válidos: {amostra}{'...' if len(centros_validos) > 5 else ''}")
+            mensagens.append("   ⚠️ RISCO: Enviar para Nibo pode resultar em erro!")
+        else:
+            mensagens.append(f"✅ OK: {len(dados)} centros de custo válidos processados. Total: R$ {total:,.2f}")
         
         return json_rateio, mensagens
         
