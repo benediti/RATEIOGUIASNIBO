@@ -1,7 +1,7 @@
 """
 Sistema Integrado de Rateio NIBO - Novo Fluxo com 5 Abas
 Fluxo: 1) Fornecedor -> 2) Categoria -> 3) Datas -> 4) Planilha -> 5) JSON
-Versao: 2.2 - Fixed 'valor' to 'value' key inconsistency in costCenters (Render redeploy)
+Versao: 2.3 - Fixed UnicodeDecodeError in CSV download
 """
 
 import streamlit as st
