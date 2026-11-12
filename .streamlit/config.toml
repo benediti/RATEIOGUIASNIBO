@@ -1,6 +1,3 @@
-﻿[general]
-email = ""
-
 [logger]
 level = "warning"
 
@@ -10,5 +7,4 @@ showErrorDetails = false
 
 [server]
 headless = true
-runOnSave = true
-port = 8501
+port = 8502
