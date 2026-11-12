@@ -753,6 +753,10 @@ with tab5:
     
     st.markdown("---")
     
+    # Inicializar variável de descrição customizada se não existir
+    if "descricao_customizada" not in st.session_state:
+        st.session_state.descricao_customizada = None
+    
     if st.session_state.arquivo_enviado is not None:
         # Processar arquivo
         with st.spinner("Processando arquivo..."):
@@ -798,6 +802,22 @@ with tab5:
             st.write(f"**Data de Agendamento:** {json_rateio.get('scheduleDate', 'N/A')}")
             st.write(f"**Data de Vencimento:** {json_rateio.get('dueDate', 'N/A')}")
             st.write(f"**Data de Competência:** {json_rateio.get('accrualDate', 'N/A')}")
+        
+        # NOVO: Campo para editar descrição
+        st.markdown("---")
+        st.subheader(" Editar Descrição")
+        descricao_original = json_rateio.get('description', '')
+        descricao_editada = st.text_input(
+            "Edite a descrição se necessário:",
+            value=descricao_original,
+            key="input_descricao",
+            help="Deixe em branco para manter a descrição original"
+        )
+        
+        # Se usuário editou a descrição, atualizar no JSON
+        if descricao_editada and descricao_editada != descricao_original:
+            json_rateio['description'] = descricao_editada
+            st.success("✅ Descrição atualizada no JSON!")
         
         # Centros de custo
         st.subheader(" Centros de Custo")
