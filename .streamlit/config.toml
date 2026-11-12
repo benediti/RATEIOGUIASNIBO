@@ -1,0 +1,14 @@
+﻿[general]
+email = ""
+
+[logger]
+level = "warning"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false
+
+[server]
+headless = true
+runOnSave = true
+port = 8501
