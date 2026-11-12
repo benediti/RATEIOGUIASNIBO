@@ -617,9 +617,17 @@ with tab5:
             )
         
         with col2:
+            # Preparar dados para download
+            arquivo_data = st.session_state.arquivo_enviado.getvalue()
+            if isinstance(arquivo_data, bytes):
+                try:
+                    arquivo_data = arquivo_data.decode('utf-8', errors='replace')
+                except Exception:
+                    arquivo_data = arquivo_data.decode('latin-1', errors='replace')
+            
             st.download_button(
                 label=" Download Planilha (CSV)",
-                data=st.session_state.arquivo_enviado.getvalue().decode('utf-8') if isinstance(st.session_state.arquivo_enviado.getvalue(), bytes) else st.session_state.arquivo_enviado.getvalue(),
+                data=arquivo_data,
                 file_name=f"rateio_dados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
                 use_container_width=True
