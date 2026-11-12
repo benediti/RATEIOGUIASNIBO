@@ -182,13 +182,17 @@ def gerar_json_postman_correto_com_clientes(
         Dict com JSON estruturado corretamente
     """
     
-    # Calcular valor total (soma de todos os centros)
-    valor_total = centros_custo_df['value'].sum()
-    
     # Preparar lista de centros de custo com mapeamento de cliente
     centros_lista = []
+    valor_total_calculado = 0.0  # Usar acumulador ao invés de .sum()
+    
     for _, row in centros_custo_df.iterrows():
         centro_id_empresa = int(row['costCenterId'])
+        valor_centro = float(row['value'])
+        
+        # Arredondar para 2 casas decimais AQUI para evitar problemas de precision
+        valor_centro_arredondado = round(valor_centro, 2)
+        valor_total_calculado += valor_centro_arredondado
         
         # Procurar ID Cliente no mapeamento Nibo
         cliente_id = None
@@ -200,10 +204,13 @@ def gerar_json_postman_correto_com_clientes(
         # costCenterId = ID Cliente (UUID), não ID EMPRESA!
         centro = {
             "costCenterId": cliente_id if cliente_id else str(centro_id_empresa),  # UUID do cliente
-            "value": float(row['value'])
+            "value": valor_centro_arredondado  # Arredondado!
         }
         
         centros_lista.append(centro)
+    
+    # Usar o valor calculado (já arredondado) ao invés de .sum()
+    valor_total = valor_total_calculado
     
     # Montar JSON estruturado
     json_postman = {
@@ -213,7 +220,7 @@ def gerar_json_postman_correto_com_clientes(
         "scheduleDate": data_inicio,
         "dueDate": data_vencimento,
         "accrualDate": data_accrual,
-        "value": round(valor_total, 2),  # Valor total de agendamento (NIBO espera isso!)
+        "scheduleValue": round(valor_total, 2),  # Valor total do agendamento (NIBO espera isso!)
         "categories": [
             {
                 "categoryId": categoria_id,
@@ -377,6 +384,9 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         # Consolidar por centro de custo
         consolidado = df.groupby('centro de custo')['valor'].sum().reset_index()
         consolidado.columns = ['costCenterId', 'value']
+        
+        # Garantir que todos os valores estão arredondados para 2 casas decimais
+        consolidado['value'] = consolidado['value'].apply(lambda x: round(x, 2))
         
         # Carregar mapeamentos
         centros_nibo_df = carregar_centros_custo_nibo()

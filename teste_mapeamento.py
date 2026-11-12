@@ -83,7 +83,7 @@ json_final = {
     "scheduleDate": "2026-11-12",
     "dueDate": "2026-12-12",
     "accrualDate": "2026-11-12",
-    "value": round(valor_total, 2),  # Valor total de agendamento
+    "scheduleValue": round(valor_total, 2),  # Valor total do agendamento
     "categories": [
         {
             "categoryId": categoria_uuid,
@@ -116,19 +116,19 @@ print("\n" + "="*60)
 print("VALIDACAO DE INTEGRIDADE:")
 print("="*60)
 
-valor_root = json_final.get('value', 0)
+valor_schedule = json_final.get('scheduleValue', 0)
 valor_categoria = json_final['categories'][0]['value']
 soma_centros = sum(cc['value'] for cc in json_final['costCenters'])
 
-print(f"[OK] Valor no root JSON: R$ {valor_root:,.2f}")
+print(f"[OK] Valor em scheduleValue: R$ {valor_schedule:,.2f}")
 print(f"[OK] Valor em categories[0]: R$ {valor_categoria:,.2f}")
 print(f"[OK] Soma dos costCenters: R$ {soma_centros:,.2f}")
 
-if valor_root == valor_categoria == soma_centros:
+if valor_schedule == valor_categoria == soma_centros:
     print("\n[VALIDO] Todos os valores batem!")
 else:
     print("\n[ERRO] Valores nao batem!")
-    print(f"   Esperado: {valor_root}")
+    print(f"   Esperado: {valor_schedule}")
     print(f"   categories: {valor_categoria}")
     print(f"   soma costCenters: {soma_centros}")
 
