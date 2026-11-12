@@ -1,7 +1,7 @@
 """
 Sistema Integrado de Rateio NIBO - Novo Fluxo com 5 Abas
 Fluxo: 1) Fornecedor -> 2) Categoria -> 3) Datas -> 4) Planilha -> 5) JSON
-Versao: 2.3 - Fixed UnicodeDecodeError in CSV download
+Versao: 2.4 - Validação de centros de custo adicionada
 """
 
 import streamlit as st
