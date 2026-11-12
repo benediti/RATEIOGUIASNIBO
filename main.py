@@ -1,6 +1,7 @@
 """
 Sistema Integrado de Rateio NIBO - Novo Fluxo com 5 Abas
 Fluxo: 1) Fornecedor -> 2) Categoria -> 3) Datas -> 4) Planilha -> 5) JSON
+Versao: 2.1 - Fixed requirements.txt openpyxl version
 """
 
 import streamlit as st
