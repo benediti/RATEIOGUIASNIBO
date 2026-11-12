@@ -223,14 +223,14 @@ def processar_resposta_fornecedor(arquivo, fornecedor_id: str, categoria: str,
         for _, row in consolidado.iterrows():
             dados.append({
                 'costCenterId': str(row['costCenterId']).strip(),
-                'valor': round(float(row['value']), 2)
+                'value': round(float(row['value']), 2)
             })
         
         if not dados:
             return None, ["Erro: Nenhum dado válido encontrado na planilha"]
         
         # Calcular total
-        total = sum(d['valor'] for d in dados)
+        total = sum(d['value'] for d in dados)
         
         # Gerar JSON
         json_rateio = {
